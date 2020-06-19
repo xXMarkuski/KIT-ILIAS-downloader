@@ -201,6 +201,9 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 			}
 		},
 		File { url, .. } => {
+			let mut path = path.clone();
+			fix_path(&mut path, obj.name());
+
 			if ilias.opt.skip_files {
 				return Ok(());
 			}
@@ -242,7 +245,8 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 					path.push(format!("{}.mp4", title));
 					log!(1, "Found video: {}", title);
 					let video = Video {
-						url: URL::raw(link.value().attr("href").ok_or(anyhow!("video link without href"))?.to_owned())
+						name: String::from(title),
+						url: URL::raw(link.value().attr("href").ok_or(anyhow!("video link without href"))?.to_owned()),
 					};
 					let ilias = Arc::clone(&ilias);
 					task::spawn(async {
@@ -251,7 +255,10 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 				}
 			}
 		},
-		Video { url } => {
+		Video { url, .. } => {
+			let mut path = path.clone();
+			fix_path(&mut path, obj.name());
+
 			lazy_static!{
 				static ref XOCT_REGEX: Regex = Regex::new(r#"(?m)<script>\s+xoctPaellaPlayer\.init\(([\s\S]+)\)\s+</script>"#).unwrap();
 			}
@@ -475,6 +482,17 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 	}
 	Ok(())
 }}
+
+///Replaces "/" that are in the name part of a path with "."
+fn fix_path(path : &mut PathBuf, name: &str) {
+	let to_pop = name.matches("/").count();
+	for _ in 0..=to_pop {
+		path.pop();
+	}
+
+	let new = name.replace("/", ".");
+	path.push(new);
+}
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = env!("CARGO_PKG_NAME"))]
@@ -714,6 +732,7 @@ enum Object {
 		url: URL
 	},
 	Video {
+		name: String,
 		url: URL,
 	},
 	Generic {
@@ -737,9 +756,9 @@ impl Object {
 				Presentation { name, .. } |
 				ExerciseHandler { name, .. } |
 				PluginDispatch { name, .. } |
+				Video { name, .. } |
 				Generic { name, .. } => &name,
 			Thread { url } => &url.thr_pk.as_ref().unwrap(),
-			Video { url } => &url.url,
 		}
 	}
 
@@ -756,7 +775,7 @@ impl Object {
 				Presentation { url, .. } |
 				ExerciseHandler { url, .. } |
 				PluginDispatch { url, .. } |
-				Video { url } |
+				Video { url, .. } |
 				Generic { url, .. } => &url,
 		}
 	}
