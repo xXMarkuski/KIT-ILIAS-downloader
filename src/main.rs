@@ -236,8 +236,8 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 				let link = link.unwrap();
 				let mut cells = row.select(&td);
 				if let Some(title) = cells.nth(2) {
-					let title = title.text().collect::<String>() + ".mp4";
-					let title = title.trim();
+					let title = title.text().collect::<String>();
+					let title = title.trim().to_owned() + ".mp4";
 					if title.starts_with("<div") {
 						continue;
 					}
