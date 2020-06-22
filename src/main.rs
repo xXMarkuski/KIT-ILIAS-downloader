@@ -236,13 +236,13 @@ fn process(ilias: Arc<ILIAS>, mut path: PathBuf, obj: Object) -> impl Future<Out
 				let link = link.unwrap();
 				let mut cells = row.select(&td);
 				if let Some(title) = cells.nth(2) {
-					let title = title.text().collect::<String>();
+					let title = title.text().collect::<String>() + ".mp4";
 					let title = title.trim();
 					if title.starts_with("<div") {
 						continue;
 					}
 					let mut path = path.clone();
-					path.push(format!("{}.mp4", title));
+					path.push(format!("{}", title));
 					log!(1, "Found video: {}", title);
 					let video = Video {
 						name: String::from(title),
